@@ -76,17 +76,23 @@ def preprocess_code(code):
 # Evaluates complexity of each repository
 def evaluate_complexity(code):
     prompt = "Assess the technical complexity of the following code and only provide a number:\n"
+    prompt1 = "Assess the technical complexity of the following code and provide a score and justify your score:\n"
     preprocessed_code = preprocess_code(code)
     full_prompt = prompt + preprocessed_code
-
+    full_prompt1 = prompt1 + preprocessed_code
     response = openai.Completion.create(
         engine=GPT_ENGINE,
         prompt=full_prompt,
         max_tokens=1000,  # Adjust this value based on GPT's token limit
+        temperature=0.3,  # Adjust temperature for desired randomness
+    )
+    response1 = openai.Completion.create(
+        engine=GPT_ENGINE,
+        prompt=full_prompt1,
+        max_tokens=1000,  # Adjust this value based on GPT's token limit
         temperature=0.1,  # Adjust temperature for desired randomness
     )
-
-    return response.choices[0].text.strip()
+    return response.choices[0].text.strip(),response1.choices[0].text.strip()
 
 # This compares and finds most complex repository
 def find_most_technically_complex_repository(github_user_url):
@@ -96,17 +102,18 @@ def find_most_technically_complex_repository(github_user_url):
     
     for repo in repositories:
         preprocessed_code = preprocess_code(repo['url'])
-        complexity_score = evaluate_complexity(preprocessed_code)
+        complexity_score,justification = evaluate_complexity(preprocessed_code)
         complexity_score = float(re.sub(r'[^\d.]', '', complexity_score))
         print(complexity_score,type(complexity_score))
         
         if complexity_score > max_complexity_score:
             max_complexity_score = complexity_score
             most_complex_repo = repo['name']
+            justification = justification
     
-    return most_complex_repo
+    return most_complex_repo,justification
 
 if __name__ == "__main__":
     user_url = "https://github.com/satishkumar707"
-    most_complex_repo = find_most_technically_complex_repository(user_url)
-    print(f"The most technically complex repository is: {most_complex_repo}")
+    most_complex_repo,justification = find_most_technically_complex_repository(user_url)
+    print(f"The most technically complex repository is: {most_complex_repo} and justification is as following {justification.split('/')[-1]}")
