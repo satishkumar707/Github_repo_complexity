@@ -128,5 +128,6 @@ def github_repo_complexity():
         print(justification.split('/')[-1])
         return render_template('output.html',most_complex_repo_url=most_complex_repo_url,justification=justification.split('/')[-1])
 
-app.run(debug=False)
+if __name__=='__main__':
+    app.run(debug=False)
 
