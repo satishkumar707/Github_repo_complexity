@@ -1,7 +1,6 @@
 from flask import Flask,render_template,request
 import requests
 import openai
-import os
 import tokenize
 from io import BytesIO
 import re
