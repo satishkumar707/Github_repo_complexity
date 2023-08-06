@@ -1,7 +1,6 @@
 flask
 openai
 requests
-tokenize
 io
 re
 os
