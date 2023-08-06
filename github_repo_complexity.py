@@ -1,3 +1,4 @@
+from flask import Flask,render_template,request
 import requests
 import openai
 import os
@@ -11,8 +12,7 @@ GITHUB_API_BASE_URL = 'https://api.github.com/users'
 GITHUB_API_REPOS_ENDPOINT = '/repos'
 
 # GPT constants
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
+#OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GPT_ENGINE = 'text-davinci-003'  # Choose the appropriate GPT-3 engine for your needs
 
 def fetch_user_repositories(github_user_url):
@@ -76,7 +76,7 @@ def preprocess_code(code):
 # Evaluates complexity of each repository
 def evaluate_complexity(code):
     prompt = "Assess the technical complexity of the following code and only provide a number:\n"
-    prompt1 = "Assess the technical complexity of the following code and provide a score and justify your score:\n"
+    prompt1 = "Assess the technical complexity of the following code and provide a score and justfy your score:\n"
     preprocessed_code = preprocess_code(code)
     full_prompt = prompt + preprocessed_code
     full_prompt1 = prompt1 + preprocessed_code
@@ -95,25 +95,39 @@ def evaluate_complexity(code):
     return response.choices[0].text.strip(),response1.choices[0].text.strip()
 
 # This compares and finds most complex repository
-def find_most_technically_complex_repository(github_user_url):
+def find_most_technically_complex_repository(github_user_url,OPENAI_API_KEY):
+    openai.api_key = OPENAI_API_KEY
     repositories = fetch_user_repositories(github_user_url)
-    most_complex_repo = None
+    most_complex_repo_url = None
     max_complexity_score = float('-inf')
     
     for repo in repositories:
         preprocessed_code = preprocess_code(repo['url'])
         complexity_score,justification = evaluate_complexity(preprocessed_code)
         complexity_score = float(re.sub(r'[^\d.]', '', complexity_score))
-        print(complexity_score,type(complexity_score))
         
         if complexity_score > max_complexity_score:
             max_complexity_score = complexity_score
-            most_complex_repo = repo['name']
+            most_complex_repo_url = "https://github.com/"+'/'.join(repo['url'].split('/')[-2:])
             justification = justification
+            
     
-    return most_complex_repo,justification
+    return most_complex_repo_url,justification
 
-if __name__ == "__main__":
-    user_url = "https://github.com/satishkumar707"
-    most_complex_repo,justification = find_most_technically_complex_repository(user_url)
-    print(f"The most technically complex repository is: {most_complex_repo} and justification is as following {justification.split('/')[-1]}")
+app = Flask(__name__)
+@app.route('/form')
+def form():
+    return render_template('form.html')
+    
+@app.route('/repo/', methods = ['POST', 'GET'])
+def github_repo_complexity():
+    if request.method == 'GET':
+        return f"The URL /repo is accessed directly. First enter the details to '/form' to submit user_url and api_key"
+    if request.method == 'POST':
+        form_data = request.form
+        most_complex_repo_url,justification = find_most_technically_complex_repository(form_data['Enter User Github URL'],form_data['API-key'])
+        print(justification.split('/')[-1])
+        return render_template('output.html',most_complex_repo_url=most_complex_repo_url,justification=justification.split('/')[-1])
+
+app.run(host='localhost', port=5000)
+
